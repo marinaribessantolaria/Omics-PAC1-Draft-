@@ -157,10 +157,7 @@ To do this we can put the different parts together using the SummarizedExperimen
 
 First, we make sure that the samples are in the same order in the count matrix and the sample annotation, and the same for the genes in the count matrix and the gene annotation.
 
-```{r}
-stopifnot(rownames(matrix) == metadata$Accession)
-stopifnot(colnames(matrix) == samples)
-```
+
 
 
 
@@ -168,6 +165,10 @@ stopifnot(colnames(matrix) == samples)
 se <- SummarizedExperiment(assays = list(counts = matrix),colData = Targets, rowData = phsub)
 se
 ```
+```{r}
+metadata(se)
+```
+
 
 
 ```{r}

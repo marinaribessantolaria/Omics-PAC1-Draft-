@@ -1,1 +1,194 @@
-Test changes PAC1
+---
+title: "Informe PEC1 - Anàlisis òmics"
+author: "Marina Ribes Santolaria"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+toc-title: "Taula de continguts"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, include=FALSE}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+```
+
+We will create a SummarizedExperiment from these tables:
+
+The count matrix that will be used as the assay
+
+The table describing the samples will be used as the sample metadata slot
+
+The table describing the genes will be used as the features metadata slot
+
+https://uclouvain-cbio.github.io/bioinfo-training-02-rnaseq/sec-se.html
+
+To do this we can put the different parts together using the SummarizedExperiment constructor:
+
+```{r, include=FALSE}
+#BiocManager::install("SummarizedExperiment")
+library(SummarizedExperiment)
+```
+
+
+The acompanying dataset has been obtained from a phosphoproteomics experiment
+The experiment has analyzed (3 + 3) PDX models of two different subtypes using Phosphopeptide enriched samples.
+LC-MS analysis of 2 technical duplicates has been performed on each sample.
+The results set consisted of Normalized abundances of MS signals for ca. 1400 phosphopeptides
+Goal of the analysis: **search phosphopeptides that allow differentiation of the two tumor groups*
+This should be made with both Statistical Analysis and visualization.
+
+Groups are defined as:
+- MSS group: Samples M1, M5 and T49,
+- PD group: Samples M42, M43 and M64 with two technical replicates for each sample
+The first column, *SequenceModification* contains abundance values for the distinct phosphopetides. Other columns can be omitted.
+
+Start reading data. Remember spreadsheets from the same workbook can be read separately.
+```{r}
+require(readxl)
+data <- read_excel("TIO2+PTYR-human-MSS+MSIvsPD.XLSX")
+View(data)
+
+```
+
+```{r}
+require(readxl)
+phData <- read_excel(path= "TIO2+PTYR-human-MSS+MSIvsPD.XLSX", sheet=1)
+head(phData)
+targets <- read_excel(path= "TIO2+PTYR-human-MSS+MSIvsPD.XLSX", sheet=2)
+show(targets)
+```
+
+```{r}
+colnames(data)
+```
+SequenceModification* contains abundance values for the distinct phosphopetides.
+```{r}
+head(phData)
+```
+```{r}
+dim(phData)
+dim(data)
+```
+
+
+Accession identifier 
+
+In mass spectrometry-based proteomics, protein identification results usually consist of peptide sequences and database-dependent accession identifiers of the matching proteins. Often certain annotations are only available in particular databases that in turn must be queried by a certain identifier. In order to simplify and unify the tracing of identified proteins back to their original annotation information, a system capable of set-oriented mapping the different accession identifiers of proteins derived from multiple sequence database sources has been developed. This allows unification of the access to protein information and tracing to other online resources providing additional information as well as resolving cross-references of protein identifications. 
+
+https://pubmed.ncbi.nlm.nih.gov/16888720/
+
+```{r}
+dim(data)
+```
+2.1.1 Creating a SummarizedExperiment
+In order to create a SummarizedExperiment, we will create the individual components, i.e the count matrix, the sample and gene metadata 
+
+expression matrix: we load the count matrix, specifying that the first columns contains row/gene names, and convert the data.frame to a matrix. 
+
+```{r}
+Accession_names<-phData$Accession
+```
+
+```{r}
+matrix <- as.matrix(phData[,5:16])
+rownames(matrix)<-Accession_names
+matrix[1:5,]
+```
+```{r}
+dim(matrix)
+```
+
+
+A table describing the samples, 
+```{r}
+Samples<-colnames(matrix)
+targets$Samples = Samples
+Targets <- targets[,c(5,1,2,3,4)]
+Targets
+```
+
+```{r}
+dim(Targets)
+```
+
+```{r}
+phsub<-phData[,1:4]
+dim(phsub)
+```
+
+```{r}
+
+phData_info<-subset(phData, select = -c(5:16))
+metadata<- merge(phData_info, targets)
+head(metadata)
+```
+```{r}
+dim(metadata)
+```
+
+
+
+A table describing the genes, 
+```{r}
+accession <-  metadata[,1:3]
+Phospho<- accession[,c(2,1,3)]
+head(Phospho)
+```
+```{r}
+dim(Phospho)
+```
+
+We will create a SummarizedExperiment from these tables:
+
+The count matrix that will be used as the assay
+
+The table describing the samples will be used as the sample metadata slot
+
+The table describing the genes will be used as the features metadata slot
+
+
+To do this we can put the different parts together using the SummarizedExperiment constructor:
+
+First, we make sure that the samples are in the same order in the count matrix and the sample annotation, and the same for the genes in the count matrix and the gene annotation.
+
+```{r}
+stopifnot(rownames(matrix) == metadata$Accession)
+stopifnot(colnames(matrix) == samples)
+```
+
+
+
+```{r}
+se <- SummarizedExperiment(assays = list(counts = matrix),colData = Targets, rowData = phsub)
+se
+```
+
+
+```{r}
+matrix2<-matrix(phData[,5:16], nrow(Phospho), ncol=nrow(Targets))
+colnames(matrix2)=Targets$Samples
+rownames(matrix2)=Phospho$Accession
+se2 <- SummarizedExperiment(assays = list(counts = matrix2),colData = Targets, rowData = Phospho)
+se2
+
+```
+
+# ABSTRACT
+
+ 
+# OBJECTIUS DE L'ESTUDI
+
+
+# MATERIALS I MÈTODES
+
+
+# RESULTATS
+
+
+# DISUCIÓ, LIMITACIONS I CONCLUSIONS DE L'ESTUDI

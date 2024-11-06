@@ -18,74 +18,101 @@ if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 ```
 
+
+# ABSTRACT
+
+
+ 
+# OBJECTIUS DE L'ESTUDI
+
+L'objectiu d'aquest estudi és:
+
+*   L'ús de SummarizedExperiments de Bioconstructor per tal d'estudiar dades de fosfoproteòmica.
+
+*   La descripció de les dades obtingudes mitjançant un estudi general del Summarized Experiment generat.
+
+*   Determinar si hi ha diferències entre mostres de dos models de xenografts derivats de pacients (PDX) diferents (MSS o PD) pel que fa al perfil de fosfopeptids enriquits en cada mostra.
+
+
+# MATERIALS I MÈTODES
+
+En aquesta activitat es treballa amb les dades proporcionades en el repositori de github: https://github.com/nutrimetabolomics/metaboData/. Més concretament, s'ha seleccionat el dataset de 2018-Phosphoproteomics.
+ 
+Les dades contingudes en aquest dataset es tracten de 3 mostres de model PDX de fenotip MSS (mostres M1, M5 i T49) i 3 mostres de fenotip PD (M42, M43 i M64), amb un replicat tècnic de cada mostra. La forma en que s'han obtingut les dades és mitjançant l'extirpació del PDX del ratolí, l'enrriquiment de fosfopèptids en les mostres i finalment l'anàlisi mitjançant LC-MS. D'aquesta manera s'ha obtingut les seqüències modificades obingudes (accessió) i el seu valor d'abundància per cada mostra i rèplica.
+
+Podem visualitzar un resum de el procediment que s'ha següit en aquest diagrama que s'inclou en el respositori:
+
+![A phosphoproteomics experiment](phosphoproteomics.png)
+
+Respecte al processament de dades, s'ha utlitzat el programa RStudio i les eines Bioconstructor i SummarizedExperiments pel processament de dades. El projecte creat es troba sota control de versions gràcies a l'eina Git i el repositori Github (POSAR LINK AQUÍ****).
+
+
+
+# RESULTATS
+
+Per tal de treballar amb les dades generem un SummarizedExperiment, que ha de constar dels següents elements:
+
+*   Una matriu que s'erà utilizada com a assaig o "assay", on s'inclouen els valors d'abundància del les diferents accessions obtingudes per cada mostra
+
+*   Una taula on es descriuen les mostres que s'han utiltizat
+
+*   Una taula on es descriuen les accessions, és a dir, els pèptids fosforilats
+
 We will create a SummarizedExperiment from these tables:
 
-The count matrix that will be used as the assay
-
-The table describing the samples will be used as the sample metadata slot
-
-The table describing the genes will be used as the features metadata slot
 
 https://uclouvain-cbio.github.io/bioinfo-training-02-rnaseq/sec-se.html
 
-To do this we can put the different parts together using the SummarizedExperiment constructor:
+
 
 ```{r, include=FALSE}
 #BiocManager::install("SummarizedExperiment")
 library(SummarizedExperiment)
 ```
 
+Per tal de generar el Summarized Experiment, en primer lloc obtenim les dades del repositori:
 
-The acompanying dataset has been obtained from a phosphoproteomics experiment
-The experiment has analyzed (3 + 3) PDX models of two different subtypes using Phosphopeptide enriched samples.
-LC-MS analysis of 2 technical duplicates has been performed on each sample.
-The results set consisted of Normalized abundances of MS signals for ca. 1400 phosphopeptides
-Goal of the analysis: **search phosphopeptides that allow differentiation of the two tumor groups*
-This should be made with both Statistical Analysis and visualization.
-
-Groups are defined as:
-- MSS group: Samples M1, M5 and T49,
-- PD group: Samples M42, M43 and M64 with two technical replicates for each sample
-The first column, *SequenceModification* contains abundance values for the distinct phosphopetides. Other columns can be omitted.
-
-Start reading data. Remember spreadsheets from the same workbook can be read separately.
 ```{r}
+#####ELIMINAR????
 require(readxl)
 data <- read_excel("TIO2+PTYR-human-MSS+MSIvsPD.XLSX")
-View(data)
+head(data)
 
 ```
 
+Llegim el primer full de càlcul i ho assignem al dataframe 'phData':
 ```{r}
-require(readxl)
-phData <- read_excel(path= "TIO2+PTYR-human-MSS+MSIvsPD.XLSX", sheet=1)
-head(phData)
-targets <- read_excel(path= "TIO2+PTYR-human-MSS+MSIvsPD.XLSX", sheet=2)
+require(readxl) #Utiltizem el paquet per llegir excels.
+#Generem el dataframe 'phData'
+phData <- read_excel(path= "TIO2+PTYR-human-MSS+MSIvsPD.XLSX", sheet=1) 
+head(phData) #Visualitzem els primers valors del dataframe
+```
+Tal i com podem veure aquest primer full de calcul conté les seqüpències de pèptids fosforilats, el seu número d'accessió, la descripció de la modificiació a la què correspon, un score que es dona per cada modificació seguida de la quantitat obtinguda per cada mostra i rèplica analitzada, finalment també s'inclouen la variable calsse i fosfo.
+
+Seguidament, llegim el segon full de càlcul i ho assignem al dataframe 'targets':
+```{r}
+#Repetim el mateix procés pel segon full de càlcul:
+targets <- read_excel(path= "TIO2+PTYR-human-MSS+MSIvsPD.XLSX", sheet=2) 
 show(targets)
 ```
+Podem veure que en aquest segon datafame la informació que es proporciona és correspon a les mostres enviades, ens indica el número de la replica tècnica, el tipus de mostra que es tracta així com el fenotiop. Podem veure que hi ha alguna informació redundant, ja que a partir de la primera columna en pots deduir la segona i la tercera. 
+
+
+
+Per tal crear el Summarized Experiments, en primer lloc hem de tenir clar les dimensions de les dades amb les que treballem, podem determinar la dimenció de les dades proporcionades mitjançant la funció 'dim':
 
 ```{r}
-colnames(data)
+dim(phData) #Uitlitzem el dataframe phData, ja que conté els valors d'interès
 ```
-SequenceModification* contains abundance values for the distinct phosphopetides.
-```{r}
-head(phData)
-```
-```{r}
-dim(phData)
-dim(data)
-```
+Podem veure que el dataframe conté 1438 files de dades, és a dir, 1438 fosfopèptids i 18 columnes, és a dir, 18 variables diferents.
 
 
-Accession identifier 
+## GENERACIÓ DEL SUMMARIZEDEXPERIMENT
 
-In mass spectrometry-based proteomics, protein identification results usually consist of peptide sequences and database-dependent accession identifiers of the matching proteins. Often certain annotations are only available in particular databases that in turn must be queried by a certain identifier. In order to simplify and unify the tracing of identified proteins back to their original annotation information, a system capable of set-oriented mapping the different accession identifiers of proteins derived from multiple sequence database sources has been developed. This allows unification of the access to protein information and tracing to other online resources providing additional information as well as resolving cross-references of protein identifications. 
+Tal com he mencionat prèviament, per tal de crear el SummarizedExperiment s'han de generar els seus components de forma indivdual.
 
-https://pubmed.ncbi.nlm.nih.gov/16888720/
 
-```{r}
-dim(data)
-```
+
 2.1.1 Creating a SummarizedExperiment
 In order to create a SummarizedExperiment, we will create the individual components, i.e the count matrix, the sample and gene metadata 
 
@@ -166,30 +193,360 @@ se <- SummarizedExperiment(assays = list(counts = matrix),colData = Targets, row
 se
 ```
 ```{r}
+metadata(se)$description <- c("The acompanying dataset has been obtained from a phosphoproteomics experiment
+The experiment has analyzed (3 + 3) PDX models of two different subtypes using Phosphopeptide enriched samples.
+LC-MS analysis of 2 technical duplicates has been performed on each sample.
+The results set consisted of Normalized abundances of MS signals for ca. 1400 phosphopeptides
+Goal of the analysis: **search phosphopeptides that allow differentiation of the two tumor groups*
+This should be made with both Statistical Analysis and visualization.
+Data have been provided as an excel file: TIO2+PTYR-human-MSS+MSIvsPD.XLSX
+
+Groups are defined as:
+- MSS group: Samples M1, M5 and T49,
+- PD group: Samples M42, M43 and M64 with two technical replicates for each sample
+The first column, *SequenceModification* contains abundance values for the distinct phosphopetides. Other columns can be omitted.")
+
+se
+```
+https://rdrr.io/bioc/SummarizedExperiment/f/vignettes/SummarizedExperiment.Rmd
+
+
+
+Anàlisi:
+
+Esutudiem el SummarizedExperiment que hem creat:
+```{r}
+colData(se)
+```
+
+```{r}
+rowData(se)
+```
+```{r}
 metadata(se)
+```
+
+Descripció de les dades
+
+Quantes variables hi ha?
+```{r}
+metadata(se)$description
+```
+
+Quantes mostres hi ha?
+```{r}
+dim(matrix)
+```
+
+Falten valors?
+```{r}
+table(is.na(matrix))
+```
+
+Obtindre estadístiques i gràfics simples:
+
+```{r}
+summary(matrix)
+```
+
+
+
+It is clear that abundance vary in a wide numeric range:
+
+
+```{r}
+boxplot(matrix)
+```
+
+This is better seen with a multiple boxplot, that is one boxplot per column. 
+
+### Boxplots in "base R"
+
+Multiple boxplots are straightforward in base R. We only need to provide data as a `data.frame
+
+
+
+The plot suggests that it may be useful to transform the data taking logarithms. A quick-and-dirty approach is to take logarithms of the data to which we have added 1 to avoid problems with zeroes.
+
+```{r}
+boxplot(log10(matrix+1), las=2, main="Phosphoproteomics Experiment. Abundance in log 10 scale")
+```
+```{r}
+logmatrix<-log10(matrix+1)
+```
+
+
+```{r}
+mean_sample<-colMeans(matrix)
+mean_sampledf<-stack(mean_sample)
+mean_sampledf
+
+```
+```{r}
+ggplot(mean_sampledf, aes(x=ind, y=values))+
+  geom_col()
+```
+
+
+```{r}
+mean_accession<-rowMeans(matrix)
+mean_accessiondf<-stack(mean_accession)
+mean_accessiondf
+
+```
+```{r}
+ggplot(mean_accessiondf, aes(x=ind, y=values))+
+  geom_col()
+```
+
+```{r}
+quant_accession<-mean_accessiondf[order(mean_accessiondf$values,
+                                decreasing = TRUE), ]
+head(quant_accession)
+```
+
+```{r}
+highaccesion<-quant_accession[1:10,]
+ggplot(highaccesion, aes(x=ind, y=values))+
+  geom_col()
+```
+
+
+
+
+
+
+correlation matrix
+```{r}
+corrmatrix<-cor(matrix)
+round(corrmatrix, 2)
+```
+
+In the table above correlations coefficients between the possible pairs of variables are shown.
+
+
+```{r}
+#install.packages("corrplot")
+library(corrplot)
+corrplot(corrmatrix,order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+
+
+alternativament també podem visualitzar aquestes dades amb un heatmap:
+
+```{r}
+col<- colorRampPalette(c("blue", "white", "red"))(20)
+heatmap(x = corrmatrix, col = col, symm = TRUE)
+```
+
+```{r}
+data_normalized<-scale(matrix)
+head(data_normalized)
+```
+
+```{r}
+col<- colorRampPalette(c("blue", "white", "red"))(20)
+heatmap(x = data_normalized, col=col)
+```
+
+
+http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
+
+## Multivariate visualization: Principal components analysis
+
+A nice way to plot a dataset is to do a Principal Components Analysis and then plot the first components.
+
+```{r}
+library(stats)
+pca<-prcomp(data_normalized, scale.=TRUE)
+summary(pca)
+```
+
+
+
+From the previous screenshot, we notice that nine principal components have been generated (Comp.1 to Comp.9), which also correspond to the number of variables in the data.
+
+Each component explains a percentage of the total variance in the data set. In the Cumulative Proportion section, the first principal component explains almost 77% of the total variance. This implies that almost two-thirds of the data in the set of 9 variables can be represented by just the first principal component. The second one explains 12.08% of the total variance. 
+
+The cumulative proportion of Comp.1 and Comp.2 explains nearly 89% of the total variance. This means that the first two principal components can accurately represent the data. 
+
+It’s great to have the first two components, but what do they really mean? 
+
+This can be answered by exploring how they relate to each column using the loadings of each principal component. 
+
+```{r}
+pca$rotation[,1:3]
+```
+```{r, include=FALSE}
+#install.packages("factoextra")
+library(factoextra)
+
+```
+
+```{r}
+fviz_pca_var(data.pca, col.var = colData(se)$Phenotype)
 ```
 
 
 
 ```{r}
-matrix2<-matrix(phData[,5:16], nrow(Phospho), ncol=nrow(Targets))
-colnames(matrix2)=Targets$Samples
-rownames(matrix2)=Phospho$Accession
-se2 <- SummarizedExperiment(assays = list(counts = matrix2),colData = Targets, rowData = Phospho)
-se2
-
+library(ggfortify)
+autoplot(data.pca)
 ```
 
-# ABSTRACT
+```{r}
+dim(assays(se)$count)
+```
 
- 
-# OBJECTIUS DE L'ESTUDI
+```{r}
+pcalog<-prcomp(logmatrix,scale. = TRUE)
+autoplot(pcalog)
+```
+```{r}
+fviz_pca_var(pcalog, col.var = colData(se)$Phenotype)
+```
+
+Three main pieces of information can be observed from the previous plot. 
+
+First, all the variables that are grouped together are positively correlated to each other, and that is the case  for instance for white/red meat, milk, and eggs have a positive correlation to each. This result is surprising because they have the highest values in the loading matrix with respect to the first principal component.
+Then, the higher the distance between the variable and the origin, the better represented that variable is. From the biplot, eggs, milk, and white meat have higher magnitude compared to red meat, and hence are well represented compared to red meat.
+Finally, variables that are negatively correlated are displayed to the opposite sides of the biplot’s origin. 
+
+The plot suggests that MSS and PD groups are differnt but the PD group seems more heterogeneous than the MSS one.
+
+Partitioning
+K-means clustering is the most popular partitioning method. It requires the analyst to specify the number of clusters to extract. A plot of the within groups sum of squares by number of clusters extracted can help determine the appropriate number of clusters. The analyst looks for a bend in the plot similar to a scree test in factor analysis.
+
+```{r}
+# Determine number of clusters
+wss <- (nrow(data_normalized)-1)*sum(apply(data_normalized,2,var))
+for (i in 2:15) wss[i] <- sum(kmeans(data_normalized,
+   centers=i)$withinss)
+plot(1:15, wss, type="b", xlab="Number of Clusters",
+  ylab="Within groups sum of squares")
+```
+```{r}
+# K-Means Cluster Analysis
+fit <- kmeans(data_normalized, 6) # 6 cluster solution
+# get cluster means
+aggregate(data_normalized,by=list(fit$cluster),FUN=mean)
+# append cluster assignment
+mydata <- data.frame(data_normalized, fit$cluster)
+```
 
 
-# MATERIALS I MÈTODES
+Hierarchical Agglomerative
+There are a wide range of hierarchical clustering approaches. I have had good luck with Ward's method described below.
+
+```{r}
+# Ward Hierarchical Clustering
+d <- dist(mydata,
+method = "euclidean") # distance matrix
+fit <- hclust(d, method="ward.D")
+
+plot(fit) # display dendogram
+groups <- cutree(fit, k=6) # cut tree into 5 clusters
+# draw dendogram with red borders around the 5 clusters
+rect.hclust(fit, k=6, border="red")
+```
 
 
-# RESULTATS
+```{r}
+#install.packages("fpc")
+```
+
+Plotting Cluster Solutions
+```{r}
+# K-Means Clustering with 6 clusters
+fit <- kmeans(mydata, 6)
+
+# Cluster Plot against 1st 2 principal components
+
+# vary parameters for most readable graph
+library(cluster)
+
+clusplot(mydata, fit$cluster, color=TRUE, shade=TRUE,
+   labels=2, lines=0)
+
+# Centroid Plot against 1st 2 discriminant functions
+
+library(fpc)
+plotcluster(mydata, fit$cluster)
+```
+
+```{r}
+library(cluster)
+plot()
+```
+
+
+# Statistical Analysis
+
+The analysis to select differentially abundant proteins will be based on a package called `limma` used mainly in microarrays. This package is part of Bioconductor (http://bioconductor.org) a giantic project created to develop open source software for omics data analysis based on R.
+
+Packages from Bioconductor need to be installed with a specific function.
+
+```{r}
+if (!(require(limma))){
+  source("http://bioconductor.org/biocLite.R")
+  biocLite("limma")
+}
+```
+
+Limma provides a sophisticated approach to omics data analysis based on the theory of the linear model. For simplicity we only describe the main ideas of the approach. Much more information is available in the user's guide.
+
+The limma approach consists of creating 
+
+1. a "design matrix" that describes assignment of samples to groups.
+2. a "contrast" matrix that describes the comparisons to be performed
+
+These two matrices are used in a set of calls to provide a list of potentially differentially expressed features.
+
+```{r}
+library(limma)
+targets <- as.data.frame(targets)
+groups <- as.factor(targets$Phenotype)
+designMat <- model.matrix(~ -1 + groups)
+show(designMat)
+```
+
+Technical replicates can be handled using a function called `duplicatecorrelation`that computes the mean correlation between replicates. This correlation is used then in the model fitting process.
+```{r}
+if (!require(statmod)) install.packages("statmod")
+dupcor <- duplicateCorrelation(abundances, designMat,block=targets$Individual)
+dupcor$consensus.correlation
+```
+
+Finally a "contrasta matrix" is prepared to describe the comparisons
+
+```{r}
+require(limma)
+contMat <- makeContrasts(mainEff=groupsPD-groupsMSS, levels=designMat)
+show(contMat)
+```
+
+Once the design and the contrast matrix are built we proceed as follows:
+
+```{r}
+fit <- lmFit(abundances, designMat, block=targets$Individual,correlation=dupcor$consensus)
+fit2 <- contrasts.fit(fit, contMat)
+fit2 <- eBayes(fit2)
+results<- topTableF(fit2, adjust="BH",  number=nrow(abundances))
+head(results)
+```
+
+The results of the analysis is a table where features, here proteins, are ordered from most to least differentially expressed according the results of the comparison performed.
+
+
+The results can be shown in a *volcano Plot* that plots the biological (fold change) vs statistical (-log (p-value)) effect.
+
+```{r}
+volcanoplot(fit2, highlight=10, names=rownames(abundances), cex=0.75,
+            xlim=c(-1e+06,1e+06))
+```
+
+The dispersion of the points suggests that the data are too variable so it may be good to review normalization and try to apply some type of dat scaling that reduces variability while keeping interesting differences.
 
 
 # DISUCIÓ, LIMITACIONS I CONCLUSIONS DE L'ESTUDI
